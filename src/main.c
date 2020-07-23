@@ -5,17 +5,20 @@
 
 int main(int argc, char** argv) {
     for (;;) {
+        int position = 0;
         size_t size = 1024;
         char* buffer = calloc(size, sizeof(char));
 
         printf("> ");
         getline(&buffer, &size, stdin);
 
-        ParserResult result = parse(buffer, size);
+        ParserResult result = parse(&position, buffer, size);
 
-        if (result.error)
-            printf("%s\n", result.error);
-        else if (result.integer)
+        if (result.error) {
+            for (int i = 0; i < position; i++)
+                printf(" ");
+            printf("  ^ %s\n", result.error);
+        } else if (result.integer)
             printf("%d\n", *result.integer);
     }
 

@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv) {
     for (;;) {
-        int position = 0;
+        size_t position = 0;
         size_t size = 1024;
         char* buffer = calloc(size, sizeof(char));
 

@@ -1,14 +1,30 @@
 CC=cc
+
 SOURCE=src
 INCLUDE=include
 TARGET=target
+
+EXECUTABLE=$(TARGET)/crisp2
+TESTS_EXECUTABLE=$(EXECUTABLE)_tests
+
 CFLAGS=-I $(INCLUDE)
 
-default: prepare main.o parser.o
-	gcc -o $(TARGET)/crisp2 $(TARGET)/*.o
+DEPS=$(addprefix $(TARGET)/, parser.o)
 
-%.o: $(SOURCE)/%.c
-	$(CC) -c -o $(TARGET)/$@ $< $(CFLAGS)
+default: prepare $(DEPS) $(TARGET)/main.o
+	gcc -o $(EXECUTABLE) $(DEPS) $(TARGET)/main.o
+
+run: default
+	./$(EXECUTABLE)
+
+tests: prepare $(DEPS) $(TARGET)/tests.o
+	gcc -o $(TESTS_EXECUTABLE) $(DEPS) $(TARGET)/tests.o
+
+run_tests: tests
+	./$(TESTS_EXECUTABLE)
+
+$(TARGET)/%.o: $(SOURCE)/%.c
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 prepare:
 	mkdir -p target/

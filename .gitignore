@@ -1,5 +1,9 @@
 target/
 
+GPATH
+GRTAGS
+GTAGS
+
 \#*\#
 .\#*
 *~

@@ -1,9 +1,10 @@
 CC=cc
-CFLAGS=
 SOURCE=src
+INCLUDE=include
 TARGET=target
+CFLAGS=-I $(INCLUDE)
 
-default: prepare main.o
+default: prepare main.o parser.o
 	gcc -o $(TARGET)/crisp2 $(TARGET)/*.o
 
 %.o: $(SOURCE)/%.c

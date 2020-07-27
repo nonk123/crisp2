@@ -11,10 +11,10 @@ CFLAGS=-I $(INCLUDE)
 
 DEPS=$(addprefix $(TARGET)/, parser.o)
 
-default: prepare $(DEPS) $(TARGET)/main.o
+build: prepare $(DEPS) $(TARGET)/main.o
 	gcc -o $(EXECUTABLE) $(DEPS) $(TARGET)/main.o
 
-run: default
+run: build
 	./$(EXECUTABLE)
 
 tests: prepare $(DEPS) $(TARGET)/tests.o

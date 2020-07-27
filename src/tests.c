@@ -1,22 +1,24 @@
-#define TEST(name) PARSER(name)
-#define RUN_TEST(name) name(&position, buffer, size)
+#define TEST(name) void name()
+#define RUN_TEST(name) name()
 
-#define ASSERT(message, expr) do {                      \
-        if (!(expr))                                    \
-            printf("Test failed: %s\n", message);       \
-        else                                            \
-            printf("Test succeeded: %s\n", message);    \
+#define ASSERT(expression) do {                         \
+        if (!(expression)) {                            \
+            printf("[FAILED] %s\n", #expression);       \
+            exit(1);                                    \
+        } else {                                        \
+            printf("[  OK  ] %s\n", #expression);       \
+        }                                               \
     } while (0)
-#define ASSERT_PARSE(expression, field, expected) do {          \
-        buffer = expression;                                    \
-        ParserResult result = CALL_PARSER(parse);               \
-        ASSERT((expression), *result.field == expected);        \
+#define ASSERT_PARSE(_buffer, expression) do {  \
+        ParserContext* ctx = new_ctx();         \
+        strcpy(ctx->buffer, _buffer);           \
+        ParserResult* result = parse(ctx);      \
+        ASSERT(expression);                     \
     } while (0)
-#define ASSERT_ERROR(expression) do {                   \
-        buffer = expression;                            \
-        ParserResult result = CALL_PARSER(parse);       \
-        ASSERT((expression), result.error);             \
-    } while (0)
+#define ASSERT_EQ(buffer, field, expected)              \
+    ASSERT_PARSE(buffer, result->field == expected)
+#define ASSERT_ERROR(buffer)                            \
+    ASSERT_PARSE(buffer, !result || result->error)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,17 +26,13 @@
 #include "parser.h"
 
 TEST(integer_test) {
-    ASSERT_PARSE("+1000", integer,  1000);
-    ASSERT_PARSE("-1000", integer, -1000);
-    ASSERT_PARSE( "1000", integer,  1000);
+    ASSERT_EQ("+1000", integer,  1000);
+    ASSERT_EQ("-1000", integer, -1000);
+    ASSERT_EQ( "1000", integer,  1000);
     ASSERT_ERROR( "1aaa");
 }
 
 int main(int argc, char** argv) {
-    size_t position = 0;
-    size_t size = 1024;
-    char* buffer = calloc(size, sizeof(char));
-
     RUN_TEST(integer_test);
 
     printf("Testing complete.\n");

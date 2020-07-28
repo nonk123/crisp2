@@ -4,6 +4,8 @@
 #include "parser.h"
 
 void free_result(ParserResult* result) {
+    if (result->symbol)
+        free(result->symbol);
     free(result);
 }
 
@@ -18,7 +20,7 @@ ParserContext* new_ctx() {
 }
 
 size_t buffer_len(ParserContext* ctx) {
-    strlen(ctx->buffer);
+    return strlen(ctx->buffer);
 }
 
 void free_ctx(ParserContext* ctx) {
@@ -32,23 +34,70 @@ int is_digit(char c) {
     return c >= '0' && c <= '9';
 }
 
+int is_valid_identifier(char c) {
+    if (c >= 'a' && c <= 'z')
+        return 1;
+
+    if (c >= 'A' && c <= 'Z')
+        return 1;
+
+    if (c >= '0' && c <= '9')
+        return 1;
+
+    if (c >= '#' && c <= '&')
+        return 1;
+
+    if (c == '*' || c == '+')
+        return 1;
+
+    if (c >= '-' && c <= '/')
+        return 1;
+
+    if (c >= '<' && c <= '@')
+        return 1;
+
+    if (c == '!' || c == ':' || c == '~' || c == '^' || c == '_' || c == '|')
+        return 1;
+
+    return 0;
+}
+
+PARSER(parse_symbol) {
+    char* symbol = calloc(ctx->size, sizeof(char));
+
+    ITERATE_WORD {
+        if (!is_valid_identifier(CHAR)) {
+            free(symbol);
+            ERROR("not a valid identifier");
+        }
+
+        symbol[ctx->position] = CHAR;
+
+        NEXT;
+    }
+
+    RESULT(symbol, symbol);
+}
+
 PARSER(parse_integer) {
     int sign = 0;
 
-    if (*ctx->buffer == '-') sign = -1;
+    if (CHAR == '-') sign = -1;
     else sign = 1;
 
-    // Offset by sign.
-    if (!is_digit(*ctx->buffer))
+    if (!is_digit(CHAR)) {
+        if (!is_digit(AHEAD))
+            PASS;
         NEXT;
+    }
 
     int number = 0;
 
     ITERATE_WORD {
-        if (!is_digit(*ctx->buffer))
-            ERROR("Expected a digit");
+        if (!is_digit(CHAR))
+            ERROR("expected a digit");
 
-        int digit = *ctx->buffer - '0';
+        int digit = CHAR - '0';
         number = number * 10 + digit;
 
         NEXT;
@@ -60,14 +109,17 @@ PARSER(parse_integer) {
 }
 
 PARSER(parse) {
-    if (*ctx->buffer == '\0')
-        ERROR("Empty buffer");
+    if (buffer_len(ctx) == 0 || CHAR <= 32)
+        ERROR("empty buffer");
 
-    if (*ctx->buffer == '-' || *ctx->buffer == '+')
-        return parse_integer(ctx);
+    if (CHAR == '-' || CHAR == '+')
+        CALL_PARSER(parse_integer);
 
-    if (is_digit(*ctx->buffer))
-        return parse_integer(ctx);
+    if (is_digit(CHAR))
+        CALL_PARSER(parse_integer);
 
-    ERROR("No parser found for input");
+    if (is_valid_identifier(CHAR))
+        CALL_PARSER(parse_symbol);
+
+    ERROR("no parser found for input");
 }

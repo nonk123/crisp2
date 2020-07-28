@@ -7,7 +7,7 @@ TARGET=target
 EXECUTABLE=$(TARGET)/crisp2
 TESTS_EXECUTABLE=$(EXECUTABLE)_tests
 
-CFLAGS=-I $(INCLUDE)
+CFLAGS=-Wall -I $(INCLUDE)
 
 DEPS=$(addprefix $(TARGET)/, parser.o)
 

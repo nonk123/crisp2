@@ -8,10 +8,9 @@
 
 #define ITERATE_WORD while(*ctx->buffer > 32)
 #define NEXT do { ctx->position++; ctx->buffer++; } while (0)
+#define CHAR *ctx->buffer
+#define AHEAD ctx->buffer[1]
 
-#define ALLOC(variable, type, value)            \
-    type * variable = malloc(sizeof(type));     \
-    *variable = value
 #define RESULT(field, value)                                    \
     do {                                                        \
         ParserResult* result = malloc(sizeof(ParserResult));    \
@@ -19,11 +18,19 @@
         return result;                                          \
     } while (0)
 #define ERROR(message) RESULT(error, message)
+#define PASS return NULL
+
+#define CALL_PARSER(name)                       \
+    do {                                        \
+        ParserResult* result = name(ctx);       \
+        if (result) return result;              \
+    } while (0)
 
 typedef struct {
-        int integer;
-        const char* error;
-    } ParserResult;
+    int integer;
+    char* symbol;
+    const char* error;
+} ParserResult;
 
 void free_result(ParserResult*);
 
@@ -39,8 +46,7 @@ size_t buffer_len(ParserContext*);
 
 void free_ctx(ParserContext*);
 
-int is_digit(char c);
-
+PARSER(parse_symbol);
 PARSER(parse_integer);
 PARSER(parse);
 

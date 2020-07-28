@@ -17,7 +17,9 @@ int main(int argc, char** argv) {
                 printf(" ");
             printf("  ^ %s", result->error);
         } else if (result->integer) {
-            printf("%d", result->integer);
+            printf("int: %d", result->integer);
+        } else if (result->symbol) {
+            printf("sym: %s", result->symbol);
         }
 
         putchar('\n');

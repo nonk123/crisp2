@@ -10,14 +10,6 @@
 #define NEXT do { ctx->position++; ctx->buffer++; } while (0)
 #define CHAR *ctx->buffer
 #define AHEAD ctx->buffer[1]
-
-#define RESULT(field, value)                                    \
-    do {                                                        \
-        ParserResult* result = malloc(sizeof(ParserResult));    \
-        result->field = value;                                  \
-        return result;                                          \
-    } while (0)
-#define ERROR(message) RESULT(error, message)
 #define PASS return NULL
 
 #define CALL_PARSER(name)                       \
@@ -31,6 +23,10 @@ typedef struct {
     char* symbol;
     const char* error;
 } ParserResult;
+
+ParserResult* new_result();
+
+ParserResult* new_error(const char*);
 
 void free_result(ParserResult*);
 

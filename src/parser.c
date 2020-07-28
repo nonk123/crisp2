@@ -3,6 +3,16 @@
 
 #include "parser.h"
 
+ParserResult* new_result() {
+    return malloc(sizeof(ParserResult));
+}
+
+ParserResult* new_error(const char* message) {
+    ParserResult* result = new_result();
+    result->error = message;
+    return result;
+}
+
 void free_result(ParserResult* result) {
     if (result->symbol)
         free(result->symbol);
@@ -63,20 +73,23 @@ int is_valid_identifier(char c) {
 }
 
 PARSER(parse_symbol) {
-    char* symbol = calloc(ctx->size, sizeof(char));
+    ParserResult* result = new_result();
+    result->symbol = calloc(ctx->size, sizeof(char));
+
+    size_t index = 0;
 
     ITERATE_WORD {
         if (!is_valid_identifier(CHAR)) {
-            free(symbol);
-            ERROR("not a valid identifier");
+            free_result(result);
+            return new_error("not a valid identifier");
         }
 
-        symbol[ctx->position] = CHAR;
+        result->symbol[index++] = CHAR;
 
         NEXT;
     }
 
-    RESULT(symbol, symbol);
+    return result;
 }
 
 PARSER(parse_integer) {
@@ -91,26 +104,29 @@ PARSER(parse_integer) {
         NEXT;
     }
 
-    int number = 0;
+    ParserResult* result = new_result();
+    result->integer = 0;
 
     ITERATE_WORD {
-        if (!is_digit(CHAR))
-            ERROR("expected a digit");
+        if (!is_digit(CHAR)) {
+            free_result(result);
+            return new_error("expected a digit");
+        }
 
         int digit = CHAR - '0';
-        number = number * 10 + digit;
+        result->integer = result->integer * 10 + digit;
 
         NEXT;
     }
 
-    number *= sign;
+    result->integer *= sign;
 
-    RESULT(integer, number);
+    return result;
 }
 
 PARSER(parse) {
     if (buffer_len(ctx) == 0 || CHAR <= 32)
-        ERROR("empty buffer");
+        return new_error("empty buffer");
 
     if (CHAR == '-' || CHAR == '+')
         CALL_PARSER(parse_integer);
@@ -121,5 +137,5 @@ PARSER(parse) {
     if (is_valid_identifier(CHAR))
         CALL_PARSER(parse_symbol);
 
-    ERROR("no parser found for input");
+    return new_error("no parser found for input");
 }

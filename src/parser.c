@@ -3,37 +3,44 @@
 
 #include "parser.h"
 
-ParserResult* new_result() {
-    return malloc(sizeof(ParserResult));
+struct ParserResult* new_result() {
+    return malloc(sizeof(struct ParserResult));
 }
 
-ParserResult* new_error(const char* message) {
-    ParserResult* result = new_result();
+struct ParserResult* new_error(const char* message) {
+    struct ParserResult* result = new_result();
     result->error = message;
     return result;
 }
 
-void free_result(ParserResult* result) {
+void free_result(struct ParserResult* result) {
     if (result->symbol)
         free(result->symbol);
+
     free(result);
 }
 
-ParserContext* new_ctx() {
-    ParserContext* ctx = malloc(sizeof(ParserContext));
+struct ParserContext* new_ctx() {
+    struct ParserContext* ctx = malloc(sizeof(struct ParserContext));
 
     ctx->size = 1024;
-    ctx->position = 0;
     ctx->buffer = calloc(ctx->size, sizeof(char));
+    ctx->at = ctx->buffer;
+    ctx->position = 0;
 
     return ctx;
 }
 
-size_t buffer_len(ParserContext* ctx) {
+void next(struct ParserContext* ctx) {
+    ctx->at++;
+    ctx->position++;
+}
+
+size_t buffer_len(struct ParserContext* ctx) {
     return strlen(ctx->buffer);
 }
 
-void free_ctx(ParserContext* ctx) {
+void free_ctx(struct ParserContext* ctx) {
     if (ctx->buffer)
         free(ctx->buffer);
 
@@ -73,20 +80,20 @@ int is_valid_identifier(char c) {
 }
 
 PARSER(parse_symbol) {
-    ParserResult* result = new_result();
+    struct ParserResult* result = new_result();
     result->symbol = calloc(ctx->size, sizeof(char));
 
     size_t index = 0;
 
-    ITERATE_WORD {
-        if (!is_valid_identifier(CHAR)) {
+    OVER_WORD {
+        if (!is_valid_identifier(*ctx->at)) {
             free_result(result);
             return new_error("not a valid identifier");
         }
 
-        result->symbol[index++] = CHAR;
+        result->symbol[index++] = *ctx->at;
 
-        NEXT;
+        next(ctx);
     }
 
     return result;
@@ -95,28 +102,28 @@ PARSER(parse_symbol) {
 PARSER(parse_integer) {
     int sign = 0;
 
-    if (CHAR == '-') sign = -1;
+    if (*ctx->at == '-') sign = -1;
     else sign = 1;
 
-    if (!is_digit(CHAR)) {
-        if (!is_digit(AHEAD))
+    if (!is_digit(*ctx->at)) {
+        if (!is_digit(ctx->at[1]))
             PASS;
-        NEXT;
+        next(ctx);
     }
 
-    ParserResult* result = new_result();
+    struct ParserResult* result = new_result();
     result->integer = 0;
 
-    ITERATE_WORD {
-        if (!is_digit(CHAR)) {
+    OVER_WORD {
+        if (!is_digit(*ctx->at)) {
             free_result(result);
             return new_error("expected a digit");
         }
 
-        int digit = CHAR - '0';
+        int digit = *ctx->at - '0';
         result->integer = result->integer * 10 + digit;
 
-        NEXT;
+        next(ctx);
     }
 
     result->integer *= sign;
@@ -124,17 +131,26 @@ PARSER(parse_integer) {
     return result;
 }
 
+#define CALL_PARSER(parser)                             \
+    do {                                                \
+        struct ParserResult* result = parser(ctx);      \
+        if (result) return result;                      \
+    } while (0)
+
 PARSER(parse) {
-    if (buffer_len(ctx) == 0 || CHAR <= 32)
+    while (*ctx->at <= ' ' && *ctx->at != '\0')
+        next(ctx);
+
+    if (buffer_len(ctx) == 0 || *ctx->at == '\0')
         return new_error("empty buffer");
 
-    if (CHAR == '-' || CHAR == '+')
+    if (*ctx->at == '-' || *ctx->at == '+')
         CALL_PARSER(parse_integer);
 
-    if (is_digit(CHAR))
+    if (is_digit(*ctx->at))
         CALL_PARSER(parse_integer);
 
-    if (is_valid_identifier(CHAR))
+    if (is_valid_identifier(*ctx->at))
         CALL_PARSER(parse_symbol);
 
     return new_error("no parser found for input");

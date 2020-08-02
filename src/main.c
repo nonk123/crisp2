@@ -7,12 +7,12 @@ int main(int argc, char** argv) {
     const char* ps1 = "> ";
 
     for (;;) {
-        ParserContext* ctx = new_ctx();
+        struct ParserContext* ctx = new_ctx();
 
         printf("%s", ps1);
         getline(&ctx->buffer, &ctx->size, stdin);
 
-        ParserResult* result = parse(ctx);
+        struct ParserResult* result = parse(ctx);
 
         if (result->error) {
             for (int i = 0; i < ctx->position + strlen(ps1); i++)
@@ -25,6 +25,9 @@ int main(int argc, char** argv) {
         }
 
         putchar('\n');
+
+        free_result(result);
+        free_ctx(ctx);
     }
 
     return 0;

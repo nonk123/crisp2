@@ -4,43 +4,37 @@
 #include <stddef.h>
 #include <string.h>
 
-#define PARSER(name) ParserResult* name(ParserContext* ctx)
+#define PARSER(name) struct ParserResult* name(struct ParserContext* ctx)
 
-#define ITERATE_WORD while(*ctx->buffer > 32)
-#define NEXT do { ctx->position++; ctx->buffer++; } while (0)
-#define CHAR *ctx->buffer
-#define AHEAD ctx->buffer[1]
+#define OVER_WORD while (*ctx->at > ' ')
 #define PASS return NULL
 
-#define CALL_PARSER(name)                       \
-    do {                                        \
-        ParserResult* result = name(ctx);       \
-        if (result) return result;              \
-    } while (0)
-
-typedef struct {
+struct ParserResult {
     int integer;
     char* symbol;
     const char* error;
-} ParserResult;
+};
 
-ParserResult* new_result();
+struct ParserResult* new_result();
 
-ParserResult* new_error(const char*);
+struct ParserResult* new_error(const char*);
 
-void free_result(ParserResult*);
+void free_result(struct ParserResult*);
 
-typedef struct {
-    size_t position;
+struct ParserContext {
     size_t size;
     char* buffer;
-} ParserContext;
+    size_t position;
+    char* at;
+};
 
-ParserContext* new_ctx();
+struct ParserContext* new_ctx();
 
-size_t buffer_len(ParserContext*);
+void next(struct ParserContext*);
 
-void free_ctx(ParserContext*);
+size_t buffer_len(struct ParserContext*);
+
+void free_ctx(struct ParserContext*);
 
 PARSER(parse_symbol);
 PARSER(parse_integer);

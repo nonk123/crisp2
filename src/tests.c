@@ -1,10 +1,14 @@
 #define TEST(name) int name()
 #define RUN_TEST(name)                                  \
     do {                                                \
+        total++;                                        \
+                                                        \
         if (name())                                     \
             printf("Test failed: %s\n\n", #name);       \
-        else                                            \
+        else {                                          \
+            successful++;                               \
             printf("Test successful: %s\n\n", #name);   \
+        }                                               \
     } while (0)
 
 #define ASSERT(buffer, expression)                              \
@@ -16,12 +20,12 @@
             printf("  OK   %s\t=> %s\n", buffer, #expression);  \
         }                                                       \
     } while (0)
-#define ASSERT_PARSE(_buffer, expression)       \
-    do {                                        \
-        ParserContext* ctx = new_ctx();         \
-        strcpy(ctx->buffer, _buffer);           \
-        ParserResult* result = parse(ctx);      \
-        ASSERT(_buffer, expression);            \
+#define ASSERT_PARSE(_buffer, expression)               \
+    do {                                                \
+        struct ParserContext* ctx = new_ctx();          \
+        strcpy(ctx->buffer, _buffer);                   \
+        struct ParserResult* result = parse(ctx);       \
+        ASSERT(_buffer, expression);                    \
     } while (0)
 #define ASSERT_EQ(buffer, field, expected)              \
     ASSERT_PARSE(buffer, result->field == expected)
@@ -57,15 +61,24 @@ TEST(symbol_test) {
     ASSERT_SYM("-car");
     ASSERT_SYM("+hello+");
     ASSERT_SYM("*world*");
+    SUCCESS;
+}
+
+TEST(errors_test) {
+    ASSERT_ERROR("123a");
     ASSERT_ERROR("-1a");
     SUCCESS;
 }
 
 int main(int argc, char** argv) {
+    int successful = 0;
+    int total = 0;
+
     RUN_TEST(integer_test);
     RUN_TEST(symbol_test);
+    RUN_TEST(errors_test);
 
-    printf("All tests complete\n");
+    printf("All tests complete\nSuccess rate: %d/%d\n", successful, total);
 
-    return 0;
+    return successful != total;
 }

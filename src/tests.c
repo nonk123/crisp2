@@ -9,30 +9,30 @@
             printf("  OK   %s\t=> %s\n", buffer, #expression);  \
         }                                                       \
     } while (0)
-#define WITH_PARSED(_buffer, body)                      \
-    do {                                                \
-        struct ParserContext* ctx = new_ctx();          \
-        strcpy(ctx->buffer, _buffer);                   \
-        struct ParserResult* result = parse(ctx);       \
-        body;                                           \
-        free_result(result);                            \
-        free_ctx(ctx);                                  \
+#define WITH_PARSED(_buffer, body)              \
+    do {                                        \
+        struct Context* ctx = new_ctx();        \
+        strcpy(ctx->buffer, _buffer);           \
+        struct Value* value = parse(ctx);       \
+        body;                                   \
+        free_value(value);                      \
+        free_ctx(ctx);                          \
     } while (0)
 
-#define ASSERT_PARSE(_buffer, expression)       \
+#define ASSERT_PARSE(_buffer, expression)               \
     WITH_PARSED(_buffer, ASSERT(_buffer, expression))
 #define ASSERT_EQ(buffer, field, expected)              \
-    ASSERT_PARSE(buffer, result->field == expected)
+    ASSERT_PARSE(buffer, value->field == expected)
 #define ASSERT_ERROR(buffer)                            \
-    ASSERT_PARSE(buffer, !result || result->error)
+    ASSERT_PARSE(buffer, !value || value->error)
 #define ASSERT_INT(_integer)                                    \
-    ASSERT_PARSE(#_integer, *result->integer == _integer)
+    ASSERT_PARSE(#_integer, *value->integer == _integer)
 #define ASSERT_SYM(_symbol)                                     \
-    ASSERT_PARSE(_symbol, !strcmp(result->symbol, _symbol))
-#define WITH_LIST(buffer, body)                         \
-    WITH_PARSED(buffer, do {                            \
-            struct ParserResult* list = result->list;   \
-            body;                                       \
+    ASSERT_PARSE(_symbol, !strcmp(value->symbol, _symbol))
+#define WITH_LIST(buffer, body)                 \
+    WITH_PARSED(buffer, do {                    \
+            struct Value* list = value->list;   \
+            body;                               \
         } while (0))
 
 #define SUCCESS return 0;
@@ -72,8 +72,8 @@ TEST(list_test) {
 }
 
 TEST(quoted_test) {
-    ASSERT_PARSE("'123", !strcmp(result->symbol, "123") && result->quoted);
-    ASSERT_PARSE("'car", !strcmp(result->symbol, "car") && result->quoted);
+    ASSERT_PARSE("'123", !strcmp(value->symbol, "123") && value->quoted);
+    ASSERT_PARSE("'car", !strcmp(value->symbol, "car") && value->quoted);
     WITH_LIST("'(hello world)", do {
             ASSERT("'hello", list->quoted);
             ASSERT("'world", list->next->quoted);

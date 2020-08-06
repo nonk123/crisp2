@@ -3,61 +3,61 @@
 
 #include "parser.h"
 
-struct ParserResult* new_result() {
-    struct ParserResult* result = malloc(sizeof(struct ParserResult));
+struct Value* new_value() {
+    struct Value* value = malloc(sizeof(struct Value));
 
-    result->integer = NULL;
-    result->symbol = NULL;
-    result->quoted = 0;
-    result->error = NULL;
-    result->next = NULL;
-    result->list = NULL;
+    value->integer = NULL;
+    value->symbol = NULL;
+    value->quoted = 0;
+    value->error = NULL;
+    value->next = NULL;
+    value->list = NULL;
 
-    return result;
+    return value;
 }
 
-struct ParserResult* new_error(const char* message) {
-    struct ParserResult* result = new_result();
-    result->error = message;
-    return result;
+struct Value* new_error(const char* message) {
+    struct Value* value = new_value();
+    value->error = message;
+    return value;
 }
 
-void set_quoted(struct ParserResult* result, int quoted) {
-    if (result->list) {
-        result->quoted = quoted;
-        result->list->quoted = quoted;
+void set_quoted(struct Value* value, int quoted) {
+    if (value->list) {
+        value->quoted = quoted;
+        value->list->quoted = quoted;
 
         if (quoted) {
-            struct ParserResult* node = result->list;
+            struct Value* node = value->list;
 
             while (node) {
                 set_quoted(node, quoted);
                 node = node->next;
             }
         }
-    } else if (!result->integer) {
-        result->quoted = quoted;
+    } else if (!value->integer) {
+        value->quoted = quoted;
     }
 }
 
-void free_result(struct ParserResult* result) {
-    if (result->symbol)
-        free(result->symbol);
+void free_value(struct Value* value) {
+    if (value->symbol)
+        free(value->symbol);
 
-    if (result->integer)
-        free(result->integer);
+    if (value->integer)
+        free(value->integer);
 
-    if (result->next)
-        free_result(result->next);
+    if (value->next)
+        free_value(value->next);
 
-    if (result->list)
-        free_result(result->list);
+    if (value->list)
+        free_value(value->list);
 
-    free(result);
+    free(value);
 }
 
-struct ParserContext* new_ctx() {
-    struct ParserContext* ctx = malloc(sizeof(struct ParserContext));
+struct Context* new_ctx() {
+    struct Context* ctx = malloc(sizeof(struct Context));
 
     ctx->size = 1024;
     ctx->buffer = calloc(ctx->size, sizeof(char));
@@ -67,52 +67,52 @@ struct ParserContext* new_ctx() {
     return ctx;
 }
 
-void next(struct ParserContext* ctx) {
+void next(struct Context* ctx) {
     ctx->at++;
     ctx->position++;
 }
 
-void prev(struct ParserContext* ctx) {
+void prev(struct Context* ctx) {
     ctx->at--;
     ctx->position--;
 }
 
-size_t buffer_len(struct ParserContext* ctx) {
+size_t buffer_len(struct Context* ctx) {
     return strlen(ctx->buffer);
 }
 
-void free_ctx(struct ParserContext* ctx) {
+void free_ctx(struct Context* ctx) {
     if (ctx->buffer)
         free(ctx->buffer);
 
     free(ctx);
 }
 
-void print_result(struct ParserContext* ctx, struct ParserResult* result, int depth) {
-    if (result->error) {
+void print_value(struct Context* ctx, struct Value* value, int depth) {
+    if (value->error) {
         for (int i = 0; i < ctx->position + 2; i++)
             putchar(' ');
-        printf("^ %s\n", result->error);
+        printf("^ %s\n", value->error);
 
         return;
     }
 
-    while (result) {
+    while (value) {
         for (int i = 0; i < depth; i++)
             putchar('\t');
 
-        if (result->list) {
-            printf("q: %d; list:\n", result->list->quoted);
-            print_result(ctx, result->list, depth + 1);
-        } else if (result->symbol) {
-            printf("sym: %s; q: %d\n", result->symbol, result->quoted);
-        } else if (result->integer) {
-            printf("int: %d\n", *result->integer);
+        if (value->list) {
+            printf("q: %d; list:\n", value->list->quoted);
+            print_value(ctx, value->list, depth + 1);
+        } else if (value->symbol) {
+            printf("sym: %s; q: %d\n", value->symbol, value->quoted);
+        } else if (value->integer) {
+            printf("int: %d\n", *value->integer);
         } else {
             printf("nil\n");
         }
 
-        result = result->next;
+        value = value->next;
     }
 }
 
@@ -164,24 +164,24 @@ PARSER(parse_list) {
     } else PASS;
 
     if (*ctx->at == ')')
-        return new_result();
+        return new_value();
 
-    struct ParserResult* result = new_result();
-    struct ParserResult* start = NULL;
-    struct ParserResult* node = NULL;
+    struct Value* value = new_value();
+    struct Value* start = NULL;
+    struct Value* node = NULL;
 
     while (ctx->position < buffer_len(ctx)) {
         if (*ctx->at == ')') {
             next(ctx);
-            result->list = start;
-            set_quoted(result, quoted);
-            return result;
+            value->list = start;
+            set_quoted(value, quoted);
+            return value;
         }
 
-        struct ParserResult* parsed = parse_token(ctx);
+        struct Value* parsed = parse_token(ctx);
 
         if (parsed->error) {
-            free_result(result);
+            free_value(value);
             return new_error(parsed->error);
         }
 
@@ -194,7 +194,7 @@ PARSER(parse_list) {
         }
     }
 
-    free_result(result);
+    free_value(value);
     return new_error("end of file");
 }
 
@@ -211,25 +211,25 @@ PARSER(parse_symbol) {
         PASS;
     }
 
-    struct ParserResult* result = new_result();
-    result->symbol = calloc(ctx->size, sizeof(char));
+    struct Value* value = new_value();
+    value->symbol = calloc(ctx->size, sizeof(char));
 
     size_t index = 0;
 
     OVER_WORD {
         if (!is_valid_identifier(*ctx->at)) {
-            free_result(result);
+            free_value(value);
             return new_error("not a valid identifier");
         }
 
-        result->symbol[index++] = *ctx->at;
+        value->symbol[index++] = *ctx->at;
 
         next(ctx);
     }
 
-    set_quoted(result, quoted);
+    set_quoted(value, quoted);
 
-    return result;
+    return value;
 }
 
 PARSER(parse_integer) {
@@ -246,31 +246,31 @@ PARSER(parse_integer) {
         next(ctx);
     }
 
-    struct ParserResult* result = new_result();
-    result->integer = malloc(sizeof(int));
-    *result->integer = 0;
+    struct Value* value = new_value();
+    value->integer = malloc(sizeof(int));
+    *value->integer = 0;
 
     OVER_WORD {
         if (!is_digit(*ctx->at)) {
-            free_result(result);
+            free_value(value);
             return new_error("expected a digit");
         }
 
         int digit = *ctx->at - '0';
-        *result->integer = *result->integer * 10 + digit;
+        *value->integer = *value->integer * 10 + digit;
 
         next(ctx);
     }
 
-    *result->integer *= sign;
+    *value->integer *= sign;
 
-    return result;
+    return value;
 }
 
-#define CALL_PARSER(parser)                             \
-    do {                                                \
-        struct ParserResult* result = parser(ctx);      \
-        if (result) return result;                      \
+#define CALL_PARSER(parser)                     \
+    do {                                        \
+        struct Value* value = parser(ctx);      \
+        if (value) return value;                \
     } while (0)
 
 PARSER(parse_token) {
@@ -288,13 +288,13 @@ PARSER(parse_token) {
 }
 
 PARSER(parse) {
-    struct ParserResult* token = parse_token(ctx);
+    struct Value* token = parse_token(ctx);
 
     if (token->error)
         return token;
 
     if (ctx->position < buffer_len(ctx) - 1) {
-        free_result(token);
+        free_value(token);
         return new_error("trailing characters");
     }
 

@@ -4,46 +4,46 @@
 #include <stddef.h>
 #include <string.h>
 
-#define PARSER(name) struct ParserResult* name(struct ParserContext* ctx)
+#define PARSER(name) struct Value* name(struct Context* ctx)
 
 #define OVER_WORD while (*ctx->at > ' ' && *ctx->at != ')')
 #define PASS return NULL
 
-struct ParserResult {
+struct Value {
     int* integer;
     char* symbol;
     int quoted;
-    struct ParserResult* next;
-    struct ParserResult* list;
+    struct Value* next;
+    struct Value* list;
     const char* error;
 };
 
-struct ParserResult* new_result();
+struct Value* new_value();
 
-struct ParserResult* new_error(const char*);
+struct Value* new_error(const char*);
 
-void set_quoted(struct ParserResult*, int);
+void set_quoted(struct Value*, int);
 
-void free_result(struct ParserResult*);
+void free_value(struct Value*);
 
-struct ParserContext {
+struct Context {
     size_t size;
     char* buffer;
     size_t position;
     char* at;
 };
 
-struct ParserContext* new_ctx();
+struct Context* new_ctx();
 
-void next(struct ParserContext*);
+void next(struct Context*);
 
-void prev(struct ParserContext*);
+void prev(struct Context*);
 
-size_t buffer_len(struct ParserContext*);
+size_t buffer_len(struct Context*);
 
-void free_ctx(struct ParserContext*);
+void free_ctx(struct Context*);
 
-void print_result(struct ParserContext*, struct ParserResult*, int);
+void print_value(struct Context*, struct Value*, int);
 
 PARSER(parse_list);
 PARSER(parse_symbol);

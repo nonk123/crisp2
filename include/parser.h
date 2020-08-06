@@ -12,6 +12,7 @@
 struct ParserResult {
     int* integer;
     char* symbol;
+    int quoted;
     struct ParserResult* next;
     struct ParserResult* list;
     const char* error;
@@ -20,6 +21,8 @@ struct ParserResult {
 struct ParserResult* new_result();
 
 struct ParserResult* new_error(const char*);
+
+void set_quoted(struct ParserResult*, int);
 
 void free_result(struct ParserResult*);
 
@@ -33,6 +36,8 @@ struct ParserContext {
 struct ParserContext* new_ctx();
 
 void next(struct ParserContext*);
+
+void prev(struct ParserContext*);
 
 size_t buffer_len(struct ParserContext*);
 

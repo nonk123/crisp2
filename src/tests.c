@@ -64,10 +64,19 @@ TEST(symbol_test) {
 }
 
 TEST(list_test) {
-    // TODO: add more tests.
     WITH_LIST("(1 2)", do {
             ASSERT("(1 2)", *list->integer == 1);
             ASSERT("(1 2)", *list->next->integer == 2);
+        } while (0));
+    SUCCESS;
+}
+
+TEST(quoted_test) {
+    ASSERT_PARSE("'123", !strcmp(result->symbol, "123") && result->quoted);
+    ASSERT_PARSE("'car", !strcmp(result->symbol, "car") && result->quoted);
+    WITH_LIST("'(hello world)", do {
+            ASSERT("'hello", list->quoted);
+            ASSERT("'world", list->next->quoted);
         } while (0));
     SUCCESS;
 }
@@ -98,6 +107,7 @@ int main(int argc, char** argv) {
     RUN_TEST(integer_test);
     RUN_TEST(symbol_test);
     RUN_TEST(list_test);
+    RUN_TEST(quoted_test);
 
     printf("All tests complete\nSuccess rate: %d/%d\n", successful, total);
 

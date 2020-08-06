@@ -8,6 +8,7 @@ struct ParserResult* new_result() {
 
     result->integer = NULL;
     result->symbol = NULL;
+    result->quoted = 0;
     result->error = NULL;
     result->next = NULL;
     result->list = NULL;
@@ -19,6 +20,24 @@ struct ParserResult* new_error(const char* message) {
     struct ParserResult* result = new_result();
     result->error = message;
     return result;
+}
+
+void set_quoted(struct ParserResult* result, int quoted) {
+    if (result->list) {
+        result->quoted = quoted;
+        result->list->quoted = quoted;
+
+        if (quoted) {
+            struct ParserResult* node = result->list;
+
+            while (node) {
+                set_quoted(node, quoted);
+                node = node->next;
+            }
+        }
+    } else if (!result->integer) {
+        result->quoted = quoted;
+    }
 }
 
 void free_result(struct ParserResult* result) {
@@ -53,6 +72,11 @@ void next(struct ParserContext* ctx) {
     ctx->position++;
 }
 
+void prev(struct ParserContext* ctx) {
+    ctx->at--;
+    ctx->position--;
+}
+
 size_t buffer_len(struct ParserContext* ctx) {
     return strlen(ctx->buffer);
 }
@@ -74,20 +98,18 @@ void print_result(struct ParserContext* ctx, struct ParserResult* result, int de
     }
 
     while (result) {
+        for (int i = 0; i < depth; i++)
+            putchar('\t');
+
         if (result->list) {
+            printf("q: %d; list:\n", result->list->quoted);
             print_result(ctx, result->list, depth + 1);
+        } else if (result->symbol) {
+            printf("sym: %s; q: %d\n", result->symbol, result->quoted);
+        } else if (result->integer) {
+            printf("int: %d\n", *result->integer);
         } else {
-            for (int i = 0; i < depth; i++)
-                putchar('\t');
-
-            if (result->symbol)
-                printf("sym: %s", result->symbol);
-            else if (result->integer)
-                printf("int: %d", *result->integer);
-            else
-                printf("nil");
-
-            putchar('\n');
+            printf("nil\n");
         }
 
         result = result->next;
@@ -127,9 +149,19 @@ int is_valid_identifier(char c) {
 }
 
 PARSER(parse_list) {
+    int quoted = 0;
+
+    if (*ctx->at == '\'') {
+        quoted = 1;
+        next(ctx);
+    }
+
     if (*ctx->at == '(')
         next(ctx);
-    else PASS;
+    else if (quoted) {
+        prev(ctx);
+        PASS;
+    } else PASS;
 
     if (*ctx->at == ')')
         return new_result();
@@ -142,6 +174,7 @@ PARSER(parse_list) {
         if (*ctx->at == ')') {
             next(ctx);
             result->list = start;
+            set_quoted(result, quoted);
             return result;
         }
 
@@ -166,8 +199,17 @@ PARSER(parse_list) {
 }
 
 PARSER(parse_symbol) {
-    if (!is_valid_identifier(*ctx->at))
+    int quoted = 0;
+
+    if (*ctx->at == '\'') {
+        quoted = 1;
+        next(ctx);
+    }
+
+    if (!is_valid_identifier(*ctx->at)) {
+        if (quoted) prev(ctx);
         PASS;
+    }
 
     struct ParserResult* result = new_result();
     result->symbol = calloc(ctx->size, sizeof(char));
@@ -184,6 +226,8 @@ PARSER(parse_symbol) {
 
         next(ctx);
     }
+
+    set_quoted(result, quoted);
 
     return result;
 }

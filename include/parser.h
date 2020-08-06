@@ -6,12 +6,14 @@
 
 #define PARSER(name) struct ParserResult* name(struct ParserContext* ctx)
 
-#define OVER_WORD while (*ctx->at > ' ')
+#define OVER_WORD while (*ctx->at > ' ' && *ctx->at != ')')
 #define PASS return NULL
 
 struct ParserResult {
-    int integer;
+    int* integer;
     char* symbol;
+    struct ParserResult* next;
+    struct ParserResult* list;
     const char* error;
 };
 
@@ -36,8 +38,12 @@ size_t buffer_len(struct ParserContext*);
 
 void free_ctx(struct ParserContext*);
 
+void print_result(struct ParserContext*, struct ParserResult*, int);
+
+PARSER(parse_list);
 PARSER(parse_symbol);
 PARSER(parse_integer);
+PARSER(parse_token);
 PARSER(parse);
 
 #endif

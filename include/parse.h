@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define PARSER(name) struct Value* name(struct Context* ctx)
 
@@ -18,7 +19,7 @@ enum Lifetime {
 struct Value {
     int* integer;
     char* symbol;
-    int quoted;
+    bool quoted;
     struct Value* list;
     struct Value* next;
     enum Lifetime lifetime;
@@ -29,7 +30,7 @@ struct Value* new_value();
 
 struct Value* new_error(const char*);
 
-void set_quoted(struct Value*, int);
+void set_quoted(struct Value*, bool);
 
 void free_owned_value(struct Value*, struct Value*);
 

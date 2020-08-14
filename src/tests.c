@@ -37,7 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "parser.h"
+#include "parse.h"
 
 TEST(integer_test) {
     ASSERT_INT(12345);

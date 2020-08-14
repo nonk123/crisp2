@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "parser.h"
+#include "parse.h"
 
 struct Value* new_value() {
     struct Value* value = malloc(sizeof(struct Value));
@@ -23,7 +23,7 @@ struct Value* new_error(const char* message) {
     return value;
 }
 
-void set_quoted(struct Value* value, int quoted) {
+void set_quoted(struct Value* value, bool quoted) {
     if (value->list) {
         value->quoted = quoted;
         value->list->quoted = quoted;
@@ -161,10 +161,10 @@ int is_valid_identifier(char c) {
 }
 
 PARSER(parse_list) {
-    int quoted = 0;
+    bool quoted = false;
 
     if (*ctx->at == '\'') {
-        quoted = 1;
+        quoted = true;
         next(ctx);
     }
 
@@ -248,11 +248,10 @@ PARSER(parse_integer) {
     int sign = 0;
 
     if (*ctx->at == '-') sign = -1;
-    else if (*ctx->at == '+') sign = 1;
-    else if (is_digit(*ctx->at)) sign = 1;
+    else if (*ctx->at == '+' || is_digit(*ctx->at)) sign = 1;
     else PASS;
 
-    if (!is_digit(*ctx->at)) {
+    if (!is_digit(ctx->at[0])) {
         if (!is_digit(ctx->at[1]))
             PASS;
         next(ctx);

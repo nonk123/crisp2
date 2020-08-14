@@ -9,9 +9,10 @@ struct Value* new_value() {
     value->integer = NULL;
     value->symbol = NULL;
     value->quoted = 0;
-    value->error = NULL;
-    value->next = NULL;
     value->list = NULL;
+    value->next = NULL;
+    value->error = NULL;
+    value->lifetime = SCOPED;
 
     return value;
 }
@@ -40,7 +41,14 @@ void set_quoted(struct Value* value, int quoted) {
     }
 }
 
-void free_value(struct Value* value) {
+void free_owned_value(struct Value* value, struct Value* owner) {
+    if (value->lifetime == STATIC)
+        return;
+
+    if (value->lifetime == OWNED)
+        if (!owner || owner->list != value)
+            return;
+
     if (value->symbol)
         free(value->symbol);
 
@@ -51,9 +59,13 @@ void free_value(struct Value* value) {
         free_value(value->next);
 
     if (value->list)
-        free_value(value->list);
+        free_owned_value(value->list, value);
 
     free(value);
+}
+
+void free_value(struct Value* value) {
+    free_owned_value(value, NULL);
 }
 
 struct Context* new_ctx() {
@@ -299,4 +311,15 @@ PARSER(parse) {
     }
 
     return token;
+}
+
+struct Value* quick_parse(const char* buffer) {
+    struct Context* ctx = new_ctx();
+    strcpy(ctx->buffer, buffer);
+
+    struct Value* parsed = parse(ctx);
+
+    free_ctx(ctx);
+
+    return parsed;
 }

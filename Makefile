@@ -9,7 +9,8 @@ TESTS_EXECUTABLE=$(EXECUTABLE)_tests
 
 CFLAGS=-Wall -I $(INCLUDE)
 
-DEPS=$(addprefix $(TARGET)/, parser.o)
+_DEPS=parser.o
+DEPS=$(addprefix $(TARGET)/, $(_DEPS))
 
 build: prepare $(DEPS) $(TARGET)/main.o
 	gcc -o $(EXECUTABLE) $(DEPS) $(TARGET)/main.o

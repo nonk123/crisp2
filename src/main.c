@@ -8,13 +8,17 @@ int main(int argc, char** argv) {
         struct Context* ctx = new_ctx();
 
         printf("> ");
-        getline(&ctx->buffer, &ctx->size, stdin);
+
+        if (getline(&ctx->buffer, &ctx->size, stdin) == EOF) {
+            putchar('\n');
+            break;
+        }
 
         struct Value* value = parse(ctx);
         print_value(ctx, value, 0);
 
-        free_value(value);
         free_ctx(ctx);
+        free_value(value);
     }
 
     return 0;

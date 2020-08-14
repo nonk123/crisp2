@@ -9,18 +9,15 @@
             printf("  OK   %s\t=> %s\n", buffer, #expression);  \
         }                                                       \
     } while (0)
-#define WITH_PARSED(_buffer, body)              \
-    do {                                        \
-        struct Context* ctx = new_ctx();        \
-        strcpy(ctx->buffer, _buffer);           \
-        struct Value* value = parse(ctx);       \
-        body;                                   \
-        free_value(value);                      \
-        free_ctx(ctx);                          \
+#define WITH_PARSED(buffer, body)                       \
+    do {                                                \
+        struct Value* value = quick_parse(buffer);      \
+        body;                                           \
+        free_value(value);                              \
     } while (0)
 
-#define ASSERT_PARSE(_buffer, expression)               \
-    WITH_PARSED(_buffer, ASSERT(_buffer, expression))
+#define ASSERT_PARSE(buffer, expression)                \
+    WITH_PARSED(buffer, ASSERT(buffer, expression))
 #define ASSERT_EQ(buffer, field, expected)              \
     ASSERT_PARSE(buffer, value->field == expected)
 #define ASSERT_ERROR(buffer)                            \
@@ -103,11 +100,11 @@ int main(int argc, char** argv) {
     int successful = 0;
     int total = 0;
 
-    RUN_TEST(errors_test);
     RUN_TEST(integer_test);
     RUN_TEST(symbol_test);
     RUN_TEST(list_test);
     RUN_TEST(quoted_test);
+    RUN_TEST(errors_test);
 
     printf("All tests complete\nSuccess rate: %d/%d\n", successful, total);
 

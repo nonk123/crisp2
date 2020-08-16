@@ -7,9 +7,9 @@ TARGET=target
 EXECUTABLE=$(TARGET)/crisp2
 TESTS_EXECUTABLE=$(EXECUTABLE)_tests
 
-CFLAGS=-Wall -I $(INCLUDE)
+CFLAGS=-Wall -I $(INCLUDE) -g
 
-_DEPS=parse.o
+_DEPS=parse.o eval.o
 DEPS=$(addprefix $(TARGET)/, $(_DEPS))
 
 build: prepare $(DEPS) $(TARGET)/main.o

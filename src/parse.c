@@ -3,6 +3,27 @@
 
 #include "parse.h"
 
+static struct Value* STATIC = NULL;
+
+struct ListNode* new_list_node() {
+    struct ListNode* node = malloc(sizeof(struct ListNode));
+
+    node->value = NULL;
+    node->next = NULL;
+
+    return node;
+}
+
+void free_list_node(struct ListNode* node, struct Value* owner) {
+    if (node->value)
+        free_owned_value(node->value, owner);
+
+    if (node->next)
+        free_list_node(node->next, owner);
+
+    free(node);
+}
+
 struct Value* new_value() {
     struct Value* value = malloc(sizeof(struct Value));
 
@@ -10,9 +31,8 @@ struct Value* new_value() {
     value->symbol = NULL;
     value->quoted = 0;
     value->list = NULL;
-    value->next = NULL;
     value->error = NULL;
-    value->lifetime = SCOPED;
+    value->lifetime = NULL;
 
     return value;
 }
@@ -23,16 +43,29 @@ struct Value* new_error(const char* message) {
     return value;
 }
 
+void make_static(struct Value* value) {
+    if (!STATIC) {
+        STATIC = new_value();
+        STATIC->lifetime = STATIC;
+    }
+
+    value->lifetime = STATIC;
+}
+
+void set_ownership(struct Value* value, struct Value* owner) {
+    if (value->lifetime != STATIC)
+        value->lifetime = owner;
+}
+
 void set_quoted(struct Value* value, bool quoted) {
     if (value->list) {
         value->quoted = quoted;
-        value->list->quoted = quoted;
 
         if (quoted) {
-            struct Value* node = value->list;
+            struct ListNode* node = value->list;
 
-            while (node) {
-                set_quoted(node, quoted);
+            while (node && node->value) {
+                set_quoted(node->value, quoted);
                 node = node->next;
             }
         }
@@ -42,12 +75,8 @@ void set_quoted(struct Value* value, bool quoted) {
 }
 
 void free_owned_value(struct Value* value, struct Value* owner) {
-    if (value->lifetime == STATIC)
+    if (value->lifetime == STATIC || value->lifetime != owner)
         return;
-
-    if (value->lifetime == OWNED)
-        if (!owner || owner->list != value)
-            return;
 
     if (value->symbol)
         free(value->symbol);
@@ -55,11 +84,8 @@ void free_owned_value(struct Value* value, struct Value* owner) {
     if (value->integer)
         free(value->integer);
 
-    if (value->next)
-        free_value(value->next);
-
     if (value->list)
-        free_owned_value(value->list, value);
+        free_list_node(value->list, value);
 
     free(value);
 }
@@ -109,22 +135,24 @@ void print_value(struct Context* ctx, struct Value* value, int depth) {
         return;
     }
 
-    while (value) {
-        for (int i = 0; i < depth; i++)
-            putchar('\t');
+    for (int i = 0; i < depth; i++)
+        putchar('\t');
 
-        if (value->list) {
-            printf("q: %d; list:\n", value->list->quoted);
-            print_value(ctx, value->list, depth + 1);
-        } else if (value->symbol) {
-            printf("sym: %s; q: %d\n", value->symbol, value->quoted);
-        } else if (value->integer) {
-            printf("int: %d\n", *value->integer);
-        } else {
-            printf("nil\n");
+    if (value->list) {
+        printf("q: %d; list:\n", value->quoted);
+
+        struct ListNode* node = value->list;
+
+        while (node && node->value) {
+            print_value(ctx, node->value, depth + 1);
+            node = node->next;
         }
-
-        value = value->next;
+    } else if (value->symbol) {
+        printf("sym: %s; q: %d\n", value->symbol, value->quoted);
+    } else if (value->integer) {
+        printf("int: %d\n", *value->integer);
+    } else {
+        printf("nil\n");
     }
 }
 
@@ -175,35 +203,35 @@ PARSER(parse_list) {
         PASS;
     } else PASS;
 
-    if (*ctx->at == ')')
+    if (*ctx->at == ')') {
+        next(ctx);
         return new_value();
+    }
 
     struct Value* value = new_value();
-    struct Value* start = NULL;
-    struct Value* node = NULL;
+    struct ListNode* list = new_list_node();
+
+    value->list = list;
 
     while (ctx->position < buffer_len(ctx)) {
         if (*ctx->at == ')') {
             next(ctx);
-            value->list = start;
             set_quoted(value, quoted);
             return value;
         }
 
-        struct Value* parsed = parse_token(ctx);
+        struct Value* result = parse_token(ctx);
 
-        if (parsed->error) {
+        if (result->error) {
             free_value(value);
-            return new_error(parsed->error);
+            return result;
         }
 
-        if (start) {
-            node->next = parsed;
-            node = node->next;
-        } else {
-            start = parsed;
-            node = start;
-        }
+        set_ownership(result, value);
+
+        list->value = result;
+        list->next = new_list_node();
+        list = list->next;
     }
 
     free_value(value);

@@ -10,25 +10,33 @@
 #define OVER_WORD while (*ctx->at > ' ' && *ctx->at != ')')
 #define PASS return NULL
 
-enum Lifetime {
-    STATIC,
-    SCOPED,
-    OWNED,
+struct Value;
+
+struct ListNode {
+    struct Value* value;
+    struct ListNode* next;
 };
 
 struct Value {
     int* integer;
     char* symbol;
     bool quoted;
-    struct Value* list;
-    struct Value* next;
-    enum Lifetime lifetime;
+    struct ListNode* list;
+    struct Value* lifetime;
     const char* error;
 };
+
+struct ListNode* new_list_node();
+
+void free_list_node(struct ListNode*, struct Value*);
 
 struct Value* new_value();
 
 struct Value* new_error(const char*);
+
+void make_static(struct Value*);
+
+void set_ownership(struct Value*, struct Value*);
 
 void set_quoted(struct Value*, bool);
 

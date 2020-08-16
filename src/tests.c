@@ -26,10 +26,10 @@
     ASSERT_PARSE(#_integer, *value->integer == _integer)
 #define ASSERT_SYM(_symbol)                                     \
     ASSERT_PARSE(_symbol, !strcmp(value->symbol, _symbol))
-#define WITH_LIST(buffer, body)                 \
-    WITH_PARSED(buffer, do {                    \
-            struct Value* list = value->list;   \
-            body;                               \
+#define WITH_LIST(buffer, body)                         \
+    WITH_PARSED(buffer, do {                            \
+            struct ListNode* node = value->list;        \
+            body;                                       \
         } while (0))
 
 #define SUCCESS return 0;
@@ -62,8 +62,8 @@ TEST(symbol_test) {
 
 TEST(list_test) {
     WITH_LIST("(1 2)", do {
-            ASSERT("(1 2)", *list->integer == 1);
-            ASSERT("(1 2)", *list->next->integer == 2);
+            ASSERT("(1 2)", *node->value->integer == 1);
+            ASSERT("(1 2)", *node->next->value->integer == 2);
         } while (0));
     SUCCESS;
 }
@@ -72,8 +72,8 @@ TEST(quoted_test) {
     ASSERT_PARSE("'123", !strcmp(value->symbol, "123") && value->quoted);
     ASSERT_PARSE("'car", !strcmp(value->symbol, "car") && value->quoted);
     WITH_LIST("'(hello world)", do {
-            ASSERT("'hello", list->quoted);
-            ASSERT("'world", list->next->quoted);
+            ASSERT("'hello", node->value->quoted);
+            ASSERT("'world", node->next->value->quoted);
         } while (0));
     SUCCESS;
 }
